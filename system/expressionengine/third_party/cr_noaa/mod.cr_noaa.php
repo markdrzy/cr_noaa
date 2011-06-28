@@ -47,6 +47,16 @@ class Cr_noaa {
 		
 		return $q->row('lat').','.$q->row('lng');
 	}
+	
+	function _find_nearest_wxs($ll)
+	{
+		
+	}
+	
+	function _refresh_wxs()
+	{
+		
+	}
 
 }
 
