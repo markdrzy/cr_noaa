@@ -21,6 +21,9 @@ class Cr_noaa_upd {
 		);
 		$this->EE->db->insert('modules',$data);
 		
+		// Create Cache Directory
+		if ( ! mkdir(APPPATH . 'cache/' . $this->short_modname)) return FALSE;
+		
 		return TRUE;
 	}
 	
@@ -37,6 +40,14 @@ class Cr_noaa_upd {
 		$this->EE->db->delete('module_member_groups');
 		$this->EE->db->where('module_name',$this->modname);
 		$this->EE->db->delete('modules');
+		
+		// Delete Cache Files
+		foreach (glob('system/expressionengine/cache/cr_noaa/*.xml') as $f)
+		{
+			unlink($f);
+		}
+		// ... and Directory
+		rmdir(APPPATH . 'cache/' . $this->short_modname);
 		
 		return TRUE;
 	}
