@@ -3,6 +3,8 @@
 class Cr_noaa {
 
 	var $return_data = '';
+	var $modname = 'Cr_noaa';
+	var $short_modname = 'cr_noaa';
 	
 	function __construct()
 	{
@@ -33,14 +35,14 @@ class Cr_noaa {
 	
 	function _cache_ll($z,$lt,$ln)
 	{
-		$q = $this->EE->db->query("INSERT INTO `{$this->EE->db->dbprefix}cr_noaa_zipcache` (`zip`,`ll`) 
+		$q = $this->EE->db->query("INSERT INTO `{$this->EE->db->dbprefix}{$this->short_modname}_zipcache` (`zip`,`ll`) 
 									VALUES ({$z},PointFromWKB(POINT({$lt},{$ln})));");
 	}
 	
 	function _get_cached_ll($z)
 	{
 		$q = $this->EE->db->query("SELECT X(ll) AS lat, Y(ll) AS lng 
-									FROM `{$this->EE->db->dbprefix}cr_noaa_zipcache`
+									FROM `{$this->EE->db->dbprefix}{$this->short_modname}_zipcache`
 									WHERE `zip` = {$z};");
 									
 		if ($q->num_rows() == 0) return FALSE;
@@ -55,7 +57,14 @@ class Cr_noaa {
 	
 	function _refresh_wxs()
 	{
-		
+		$d = simplexml_load_file('http://www.weather.gov/xml/current_obs/index.xml');
+		foreach ($d->station as $s)
+		{
+			$sql[] = "('{$s->station_id}',{$s->latitude},{$s->longitude})";
+		}
+		$this->EE->db->query("TRUNCATE TABLE `{$this->EE->db->dbprefix}{$this->short_modname}_stations`;");
+		$this->EE->db->query("INSERT INTO `{$this->EE->db->dbprefix}{$this->short_modname}_stations` (`name`, `lat`, `lng`) 
+								VALUES ".implode(',',$sql).';');
 	}
 
 }

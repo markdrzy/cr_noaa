@@ -42,10 +42,10 @@ class Cr_noaa_upd {
 		
 		// Create Stations Table
 		$station_fields = array(
-			'station_id'	=> array('type' => 'int', 'constraint' => '10', 'unsigned' => TRUE, 'autoincrement' => TRUE),
+			'station_id'	=> array('type' => 'int', 'constraint' => '10', 'unsigned' => TRUE, 'auto_increment' => TRUE),
 			'name'			=> array('type' => 'varchar', 'constraint' => '6'),
-			'lat'			=> array('type' => 'decimal', 'constraint' => '3,6'),
-			'lng'			=> array('type' => 'decimal', 'constraint' => '3,6')
+			'lat'			=> array('type' => 'float', 'constraint' => '10,6'),
+			'lng'			=> array('type' => 'float', 'constraint' => '10,6')
 		);
 		$this->EE->dbforge->add_field($station_fields);
 		$this->EE->dbforge->add_key('station_id',TRUE);
