@@ -57,7 +57,7 @@ class Cr_noaa_upd {
 		$this->EE->load->dbforge();
 		
 		// Drop Zipcache Table
-		$this->EE->dbforge->drop_table($this->mod_shortname.'_zipcache');
+		$this->EE->dbforge->drop_table($this->short_modname.'_zipcache');
 		
 		// Delete Cache Files
 		foreach (glob('system/expressionengine/cache/cr_noaa/*.xml') as $f)

@@ -12,21 +12,40 @@ class Cr_noaa {
 	function current_conditions()
 	{
 		$zip = $this->EE->TMPL->fetch_param('zip');
-		$ll = $this->EE->TMPL->fetch_param('lat_lon')
+		$ll = $this->EE->TMPL->fetch_param('lat_lon');
 		if ($zip === FALSE && $ll === FALSE) return FALSE;
 		
-		if ($ll === FALSE)
+		if ($ll == FALSE && ($ll = $this->_get_cached_ll($zip)) === FALSE)
 		{
 			$g = 'http://maps.google.com/maps/api/geocode/xml?address='.$zip.'&sensor=false';
 			$x = simplexml_load_file($g);
 			$ll = $x->result->geometry->location->lat.','.$x->result->geometry->location->lng;
+			
+			$this->_cache_ll($zip,$x->result->geometry->location->lat,$x->result->geometry->location->lng);
 		}
 		
-		
+		die($ll);
 	}
 	
 	function forecast()
 	{
+	}
+	
+	function _store_ll($z,$lt,$ln)
+	{
+		$q = $this->EE->db->query("INSERT INTO `{$this->EE->db->dbprefix}cr_noaa_zipcache` (`zip`,`ll`) 
+									VALUES ({$z},PointFromWKB(POINT({$lt},{$ln})));");
+	}
+	
+	function _get_cached_ll($z)
+	{
+		$q = $this->EE->db->query("SELECT X(ll) AS lat, Y(ll) AS lng 
+									FROM `{$this->EE->db->dbprefix}cr_noaa_zipcache`
+									WHERE `zip` = {$z};");
+									
+		if ($q->num_rows() == 0) return FALSE;
+		
+		return $q->results('lat').','.$q->results('lng');
 	}
 
 }
