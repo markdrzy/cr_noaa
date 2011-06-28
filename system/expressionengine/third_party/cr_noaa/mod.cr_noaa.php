@@ -26,7 +26,7 @@ class Cr_noaa {
 			$this->_cache_ll($zip,$x->result->geometry->location->lat,$x->result->geometry->location->lng);
 		}
 		
-		die($ll);
+		die($this->_find_nearest_wxs($ll));
 	}
 	
 	function forecast()
@@ -52,7 +52,13 @@ class Cr_noaa {
 	
 	function _find_nearest_wxs($ll)
 	{
+		$ls = explode(',',$ll);
+		$r = $this->EE->db->query("SELECT name, ( 3959 * acos( cos( radians('{$ls[0]}') ) * cos( radians( lat ) ) * cos( radians( lng ) - radians('{$ls[1]}') ) + sin( radians('{$ls[0]}') ) * sin( radians( lat ) ) ) ) AS distance 
+									FROM {$this->EE->db->dbprefix}{$this->short_modname}_stations 
+									HAVING distance < 150 ORDER BY distance LIMIT 1");
+		if ($r->num_rows() == 0) return FALSE;
 		
+		return $r->row('name');
 	}
 	
 	function _refresh_wxs()
@@ -65,6 +71,8 @@ class Cr_noaa {
 		$this->EE->db->query("TRUNCATE TABLE `{$this->EE->db->dbprefix}{$this->short_modname}_stations`;");
 		$this->EE->db->query("INSERT INTO `{$this->EE->db->dbprefix}{$this->short_modname}_stations` (`name`, `lat`, `lng`) 
 								VALUES ".implode(',',$sql).';');
+		
+		return TRUE;
 	}
 
 }
