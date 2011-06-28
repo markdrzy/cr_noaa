@@ -31,7 +31,7 @@ class Cr_noaa {
 	{
 	}
 	
-	function _store_ll($z,$lt,$ln)
+	function _cache_ll($z,$lt,$ln)
 	{
 		$q = $this->EE->db->query("INSERT INTO `{$this->EE->db->dbprefix}cr_noaa_zipcache` (`zip`,`ll`) 
 									VALUES ({$z},PointFromWKB(POINT({$lt},{$ln})));");
@@ -45,7 +45,7 @@ class Cr_noaa {
 									
 		if ($q->num_rows() == 0) return FALSE;
 		
-		return $q->results('lat').','.$q->results('lng');
+		return $q->row('lat').','.$q->row('lng');
 	}
 
 }
