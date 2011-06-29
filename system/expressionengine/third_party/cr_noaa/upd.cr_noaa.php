@@ -63,7 +63,7 @@ class Cr_noaa_upd {
 		$this->EE->dbforge->add_key('zip',TRUE);
 		$this->EE->dbforge->create_table($this->short_modname.'_zip_stations');
 		$this->EE->db->query('CREATE INDEX `zip_station_index` 
-								ON `'.$this->EE->db->dbprefix.$this->mod_shortname.'_zip_stations` (`zip`);');
+								ON `'.$this->EE->db->dbprefix.$this->short_modname.'_zip_stations` (`zip`);');
 		
 		// Create Cache Directory
 		if ( ! mkdir(APPPATH . 'cache/' . $this->short_modname)) return FALSE;
