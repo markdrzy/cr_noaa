@@ -60,7 +60,30 @@ class Cr_noaa {
 	
 	function _fetch_wx_data($station,$type)
 	{
-		$url = 'http://weather.gov/xml/current_obs/' . $station . '.xml';
+		switch($type)
+		{
+			case 'f':
+				$url = 'http://weather.gov/xml/current_obs/' . $station . '.xml';
+				break;
+			
+			case 'c':
+			default:
+				$ll = $this->_get_station_ll($station);
+				$url = 'http://www.weather.gov/forecasts/xml/sample_products/browser_interface/ndfdBrowserClientByDay.php?'
+						. 'lat=' . $ll['lat'] . '&lon=' . $ll['lng']
+						. '&format=24+hourly&startDate='.date('Y-m-d',time()).'&numDays=5';
+						/* UNSUMMARIZED DATA
+						'http://www.weather.gov/forecasts/xml/sample_products/browser_interface/ndfdXMLclient.php?'
+						. 'lat=' . $ll['lat'] . '&lon=' . $ll['lng']
+						. '&product=glance';
+						*/
+						/* EXTENDED DETAILS
+						. '&begin=2004-01-01T00:00:00'
+						. '&end=2013-04-20T00:00:00'
+						. '&product=time-series&maxt=maxt&mint=mint&wx=wx&pop12=pop12&icons=icons';
+						*/
+				break;
+		}
 		$file = APPPATH . 'cache/' . $this->short_modname . '/' . $station . '-' . $type . '.json';
 		
 		if (file_exists($file) && (filemtime($file) > (time() - 60 * 15 ))) {
@@ -72,13 +95,63 @@ class Cr_noaa {
 				$this->log_message('Unable to load wx data (' . $station . ', ' . $type . ')',2);
 				return FALSE;
 			}
-			foreach ($d as $line => $data)
+			switch($type)
 			{
-				if ($line != 'image')
-				{
-					$o[$line] = (string) $data;
-				}
+				case 'f':
+					$d = (array) $d->data;
+					$dates = (array) $d['time-layout'][0];
+					$params = (array) $d['parameters'];
+					
+					$o['temps'] = array();
+					foreach ($params['temperature'] as $t)
+					{
+						$temp_item = (array) $t;
+						$temp_attr = (array) $t->attributes();
+						$temp_type = $temp_attr['@attributes']['type'];
+						foreach ($temp_item['value'] as $td)
+						{
+							$o['temps'][$temp_type][] = $td;
+						}
+					}
+					
+					$o['precip'] = array();
+					$prob_precip = (array) $params['probability-of-precipitation'];
+					foreach ($prob_precip['value'] as $p)
+					{
+						$o['precip'][] = $p;
+					}
+					
+					$o['conditions'] = array();
+					$catt = 'weather-conditions';
+					$weather = (array) $params['weather'];
+					foreach ($weather['weather-conditions'] as $wxa)
+					{
+						$wxa = (array) $wxa;
+						$o['conditions'][] = $wxa['@attributes']['weather-summary'];
+					}
+					
+					$o['icons'] = array();
+					$wx_icons = (array) $params['conditions-icon'];
+					foreach ($wx_icons['icon-link'] as $i)
+					{
+						$o['icons'][] = $i;
+					}
+					
+					$o['info_url'] = $d['moreWeatherInformation'];
+				break;
+				
+				case 'c':
+				default:
+					foreach ($d as $line => $data)
+					{
+						if ($line != 'image')
+						{
+							$o[$line] = (string) $data;
+						}
+					}
+				break;
 			}
+			
 			$data = json_encode($o);
 			file_put_contents($file, $data, LOCK_EX);
 		}
@@ -145,6 +218,19 @@ class Cr_noaa {
 								VALUES ".implode(',',$sql).';');
 		
 		return TRUE;
+	}
+	
+	function _get_station_ll($s)
+	{
+		$r = $this->EE->db->query("SELECT `lat`, `lng` 
+									FROM `{$this->EE->db->dbprefix}{$this->short_modname}_stations` 
+									WHERE `name` = '{$s}';");
+		if ($r->num_rows() == 0)
+		{
+			$this->log_message('Unable to find station lat/lng.',2);
+			return FALSE;
+		}
+		return array($r->row(),$r->row());
 	}
 	
 	
