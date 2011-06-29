@@ -47,7 +47,7 @@ class Cr_noaa {
 				$this->_cache_ll($zip,$x->result->geometry->location->lat,$x->result->geometry->location->lng);
 			}
 			
-			$wxs = $this->_find_nearest_wxs($ll);
+			$wxs = $this->_find_nearest_wxs($ll,$zip);
 			setcookie($this->short_modname.'_wxs',$wxs,time()+3600,'/');
 		}
 		else
@@ -103,8 +103,15 @@ class Cr_noaa {
 		return $q->row('lat').','.$q->row('lng');
 	}
 	
-	function _find_nearest_wxs($ll)
+	function _find_nearest_wxs($ll,$z=FALSE)
 	{
+		if ($z)
+		{
+			$r = $this->EE->db->query("SELECT station 
+										FROM `{$this->EE->db->dbprefix}{$this->short_modname}_zip_stations` 
+										WHERE `zip` = {$z};");
+			if ($r->num_rows() > 0) return $r->row('station');
+		}
 		$ls = explode(',',$ll);
 		$r = $this->EE->db->query("SELECT name, ( 3959 * acos( cos( radians('{$ls[0]}') ) * cos( radians( lat ) ) * cos( radians( lng ) - radians('{$ls[1]}') ) + sin( radians('{$ls[0]}') ) * sin( radians( lat ) ) ) ) AS distance 
 									FROM {$this->EE->db->dbprefix}{$this->short_modname}_stations 
