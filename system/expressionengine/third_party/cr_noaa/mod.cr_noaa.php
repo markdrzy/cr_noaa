@@ -19,6 +19,16 @@ class Cr_noaa {
 	
 	function current_conditions()
 	{
+		$this->_get_wx('c');
+	}
+	
+	function forecast()
+	{
+		$this->_get_wx('f');
+	}
+	
+	function _get_wx($type)
+	{
 		if ( ! isset($_COOKIES[$this->short_modname.'_wxs']) && $_COOKIES[$this->short_modname.'_wxs'] != '')
 		{
 			$zip = $this->EE->TMPL->fetch_param('zip');
@@ -40,16 +50,40 @@ class Cr_noaa {
 			$wxs = $this->_find_nearest_wxs($ll);
 			setcookie($this->short_modname.'_wxs',$wxs,time()+3600,'/');
 		}
+		else
+		{
+			$wxs = $_COOKIES[$this->short_modname.'_wxs'];
+		}
 		
+		$wxc = $this->_fetch_wx_data($wxs,$type);
 	}
 	
-	function forecast()
+	function _fetch_wx_data($station,$type)
 	{
-	}
-	
-	function _cache_wx_data($n,$d)
-	{
+		$url = 'http://weather.gov/xml/current_obs/' . $station . '.xml';
+		$file = APPPATH . 'cache/' . $this->short_modname . '/' . $station . '-' . $type . '.json';
 		
+		if (file_exists($file) && (filemtime($file) > (time() - 60 * 15 ))) {
+			$data = file_get_contents($file);
+		} else {
+			$o = array();
+			if ( ($d = simplexml_load_file($url)) === FALSE)
+			{
+				$this->log_message('Unable to load wx data (' . $station . ', ' . $type . ')',2);
+				return FALSE;
+			}
+			foreach ($d as $line => $data)
+			{
+				if ($line != 'image')
+				{
+					$o[$line] = (string) $data;
+				}
+			}
+			$data = json_encode($o);
+			file_put_contents($file, $data, LOCK_EX);
+		}
+		
+		return $data;
 	}
 	
 	function _cache_ll($z,$lt,$ln)

@@ -54,6 +54,17 @@ class Cr_noaa_upd {
 		// Pre-populate Stations Table
 		$this->cr_noaa->_refresh_wxs();
 		
+		// Create Zip2Stations Table
+		$zip_stations_fields = array(
+			'zip'			=> array('type' => 'int','constraint' => '10', 'unsigned' => TRUE),
+			'station'		=> array('type' => 'varchar', 'constraint' => '6')
+		);
+		$this->EE->dbforge->add_field($zip_stations_fields);
+		$this->EE->dbforge->add_key('zip',TRUE);
+		$this->EE->dbforge->create_table($this->short_modname.'_zip_stations');
+		$this->EE->db->query('CREATE INDEX `zip_station_index` 
+								ON `'.$this->EE->db->dbprefix.$this->mod_shortname.'_zip_stations` (`zip`);');
+		
 		// Create Cache Directory
 		if ( ! mkdir(APPPATH . 'cache/' . $this->short_modname)) return FALSE;
 		
@@ -83,8 +94,11 @@ class Cr_noaa_upd {
 		// Drop Stations Table
 		$this->EE->dbforge->drop_table($this->short_modname.'_stations');
 		
+		// Drop Zip Stations Table
+		$this->EE->dbforge->drop_table($this->short_modname.'_zip_stations');
+		
 		// Delete Cache Files
-		foreach (glob(APPPATH . 'cache/' . $this->short_modname . '/*.xml') as $f)
+		foreach (glob(APPPATH . 'cache/' . $this->short_modname . '/*.json') as $f)
 		{
 			unlink($f);
 		}
