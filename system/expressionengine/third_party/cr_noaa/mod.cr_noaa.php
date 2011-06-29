@@ -29,7 +29,7 @@ class Cr_noaa {
 	
 	function _get_wx($type)
 	{
-		if ( ! isset($_COOKIES[$this->short_modname.'_wxs']) && $_COOKIES[$this->short_modname.'_wxs'] != '')
+		if ( ! isset($_COOKIE[$this->short_modname.'_wxs']) && $_COOKIE[$this->short_modname.'_wxs'] != '')
 		{
 			$zip = $this->EE->TMPL->fetch_param('zip');
 			$ll = $this->EE->TMPL->fetch_param('lat_lon');
@@ -52,7 +52,7 @@ class Cr_noaa {
 		}
 		else
 		{
-			$wxs = $_COOKIES[$this->short_modname.'_wxs'];
+			$wxs = $_COOKIE[$this->short_modname.'_wxs'];
 		}
 		
 		$wxc = $this->_fetch_wx_data($wxs,$type);
