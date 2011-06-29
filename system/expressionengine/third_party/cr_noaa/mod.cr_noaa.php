@@ -9,28 +9,47 @@ class Cr_noaa {
 	function __construct()
 	{
 		$this->EE =& get_instance();
+		
+		// Load the OmniLogger class.
+		if (file_exists(PATH_THIRD .'omnilog/classes/omnilogger' .EXT))
+		{
+			include_once PATH_THIRD .'omnilog/classes/omnilogger' .EXT;
+		}
 	}
 	
 	function current_conditions()
 	{
-		$zip = $this->EE->TMPL->fetch_param('zip');
-		$ll = $this->EE->TMPL->fetch_param('lat_lon');
-		if ($zip === FALSE && $ll === FALSE) return FALSE;
-		
-		if ($ll == FALSE && ($ll = $this->_get_cached_ll($zip)) === FALSE)
+		if ( ! isset($_COOKIES[$this->short_modname.'_wxs']) && $_COOKIES[$this->short_modname.'_wxs'] != '')
 		{
-			$g = 'http://maps.google.com/maps/api/geocode/xml?address='.$zip.'&sensor=false';
-			$x = simplexml_load_file($g);
-			$ll = $x->result->geometry->location->lat.','.$x->result->geometry->location->lng;
+			$zip = $this->EE->TMPL->fetch_param('zip');
+			$ll = $this->EE->TMPL->fetch_param('lat_lon');
+			if ($zip === FALSE && $ll === FALSE) return FALSE;
 			
-			$this->_cache_ll($zip,$x->result->geometry->location->lat,$x->result->geometry->location->lng);
+			if ($ll == FALSE && ($ll = $this->_get_cached_ll($zip)) === FALSE)
+			{
+				$g = 'http://maps.google.com/maps/api/geocode/xml?address='.$zip.'&sensor=false';
+				if ( ($x = simplexml_load_file($g)) === FALSE)
+				{
+					$this->log_message('Geocode failed.',2);
+				}
+				$ll = $x->result->geometry->location->lat.','.$x->result->geometry->location->lng;
+				
+				$this->_cache_ll($zip,$x->result->geometry->location->lat,$x->result->geometry->location->lng);
+			}
+			
+			$wxs = $this->_find_nearest_wxs($ll);
+			setcookie($this->short_modname.'_wxs',$wxs,time()+3600,'/');
 		}
 		
-		die($this->_find_nearest_wxs($ll));
 	}
 	
 	function forecast()
 	{
+	}
+	
+	function _cache_wx_data($n,$d)
+	{
+		
 	}
 	
 	function _cache_ll($z,$lt,$ln)
@@ -56,14 +75,26 @@ class Cr_noaa {
 		$r = $this->EE->db->query("SELECT name, ( 3959 * acos( cos( radians('{$ls[0]}') ) * cos( radians( lat ) ) * cos( radians( lng ) - radians('{$ls[1]}') ) + sin( radians('{$ls[0]}') ) * sin( radians( lat ) ) ) ) AS distance 
 									FROM {$this->EE->db->dbprefix}{$this->short_modname}_stations 
 									HAVING distance < 150 ORDER BY distance LIMIT 1");
-		if ($r->num_rows() == 0) return FALSE;
+		if ($r->num_rows() == 0)
+		{
+			$this->log_message('Unable to locate weather station.',2);
+			return FALSE;
+		}
 		
 		return $r->row('name');
 	}
 	
 	function _refresh_wxs()
 	{
-		$d = simplexml_load_file('http://www.weather.gov/xml/current_obs/index.xml');
+		if ( ($d = simplexml_load_file('http://www.weather.gov/xml/current_obs/index.xml')) === FALSE)
+		{
+			$this->log_message('Unable to load weather stations from NOAA.',3);
+			return FALSE;
+		}
+		else
+		{
+			$this->log_message('Weather stations download sucessful.',1);
+		}
 		foreach ($d->station as $s)
 		{
 			$sql[] = "('{$s->station_id}',{$s->latitude},{$s->longitude})";
@@ -73,6 +104,51 @@ class Cr_noaa {
 								VALUES ".implode(',',$sql).';');
 		
 		return TRUE;
+	}
+	
+	
+	
+	/**
+	* Logs an error to OmniLog.
+	*
+	* @access  public
+	* @param   string      $message        The log entry message.
+	* @param   int         $severity       The log entry 'level'.
+	* @return  void
+	*/
+	public function log_message($message, $severity = 1)
+	{
+		if (class_exists('Omnilog_entry') && class_exists('Omnilogger'))
+		{
+			switch ($severity)
+			{
+				case 3:
+				$notify = TRUE;
+				$type   = Omnilog_entry::ERROR;
+				break;
+				
+				case 2:
+				$notify = FALSE;
+				$type   = Omnilog_entry::WARNING;
+				break;
+				
+				case 1:
+				default:
+				$notify = FALSE;
+				$type   = Omnilog_entry::NOTICE;
+				break;
+			}
+			
+			$omnilog_entry = new Omnilog_entry(array(
+				'addon_name'    => 'Example Add-on',
+				'date'          => time(),
+				'message'       => $message,
+				'notify_admin'  => $notify,
+				'type'          => $type
+			));
+			
+			OmniLogger::log($omnilog_entry);
+		}
 	}
 
 }

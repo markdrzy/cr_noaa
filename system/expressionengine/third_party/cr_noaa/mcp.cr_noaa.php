@@ -3,7 +3,7 @@
 /**
  * Include cr_noaa Core Mod
  */
-require_once PATH_THIRD.'cr_noaa/mod.cr_noaa.php';
+require_once PATH_THIRD . 'cr_noaa/mod.cr_noaa' . EXT;
 
 class Cr_noaa_mcp {
 
