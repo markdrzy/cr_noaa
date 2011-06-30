@@ -21,6 +21,10 @@ class Cr_noaa {
 	{
 		$wxs = (isset($_COOKIE[$this->short_modname . '_wxs']) && $_COOKIE[$this->short_modname . '_wxs'] != '')? 
 			$_COOKIE[$this->short_modname . '_wxs']: FALSE;
+		if ($wxs === FALSE)
+		{
+			$wxs = $this->EE->TMPL->fetch_param('station');
+		}
 		$zip = $this->EE->TMPL->fetch_param('zip');
 		$ll = $this->EE->TMPL->fetch_param('lat_lon');
 		return $this->_get_wx('c',$wxs,$zip,$ll);
@@ -30,6 +34,10 @@ class Cr_noaa {
 	{
 		$wxs = (isset($_COOKIE[$this->short_modname . '_wxs']) && $_COOKIE[$this->short_modname . '_wxs'] != '')? 
 			$_COOKIE[$this->short_modname . '_wxs']: FALSE;
+		if ($wxs === FALSE)
+		{
+			$wxs = $this->EE->TMPL->fetch_param('station');
+		}
 		$zip = $this->EE->TMPL->fetch_param('zip');
 		$ll = $this->EE->TMPL->fetch_param('lat_lon');
 		return $this->_get_wx('f',$wxs,$zip,$ll);
@@ -63,37 +71,38 @@ class Cr_noaa {
 	
 	function _fetch_wx_data($station,$type)
 	{
-		switch($type)
-		{
-			case 'f':
-				// Get Station LL
-				$r = $this->EE->db->query("SELECT `lat`, `lng` 
-									FROM `{$this->EE->db->dbprefix}{$this->short_modname}_stations` 
-									WHERE `name` = '{$station}';");
-				if ($r->num_rows() == 0)
-				{
-					$this->log_message('Unable to find station lat/lng.',2);
-					return FALSE;
-				}
-				$ll = array('lat'=>$r->row('lat'),'lng'=>$r->row('lng'));
-				
-				// Generate URL
-				$url = 'http://www.weather.gov/forecasts/xml/sample_products/browser_interface/ndfdXMLclient.php?'
-						. 'lat=' . $ll['lat'] . '&lon=' . $ll['lng']
-						. '&product=glance';
-				break;
-			
-			case 'c':
-			default:
-				// Generate URL
-				$url = 'http://weather.gov/xml/current_obs/' . $station . '.xml';
-				break;
-		}
 		$file = APPPATH . 'cache/' . $this->short_modname . '/' . $station . '-' . $type . '.json';
 		
 		if (file_exists($file) && (filemtime($file) > (time() - 60 * 15 ))) {
 			$data = file_get_contents($file);
 		} else {
+			switch($type)
+			{
+				case 'f':
+					// Get Station LL
+					$r = $this->EE->db->query("SELECT `lat`, `lng` 
+										FROM `{$this->EE->db->dbprefix}{$this->short_modname}_stations` 
+										WHERE `name` = '{$station}';");
+					if ($r->num_rows() == 0)
+					{
+						$this->log_message('Unable to find station lat/lng.',2);
+						return FALSE;
+					}
+					$ll = array('lat'=>$r->row('lat'),'lng'=>$r->row('lng'));
+					
+					// Generate URL
+					$url = 'http://www.weather.gov/forecasts/xml/sample_products/browser_interface/ndfdXMLclient.php?'
+							. 'lat=' . $ll['lat'] . '&lon=' . $ll['lng']
+							. '&product=glance';
+					break;
+				
+				case 'c':
+				default:
+					// Generate URL
+					$url = 'http://weather.gov/xml/current_obs/' . $station . '.xml';
+					break;
+			}
+			
 			$o = array();
 			if ( ($d = simplexml_load_file($url)) === FALSE)
 			{
