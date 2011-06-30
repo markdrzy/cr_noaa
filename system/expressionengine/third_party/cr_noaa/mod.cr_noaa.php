@@ -19,43 +19,46 @@ class Cr_noaa {
 	
 	function current_conditions()
 	{
-		$this->_get_wx('c');
+		$wxs = (isset($_COOKIE[$this->short_modname . '_wxs']) && $_COOKIE[$this->short_modname . '_wxs'] != '')? 
+			$_COOKIE[$this->short_modname . '_wxs']: FALSE;
+		$zip = $this->EE->TMPL->fetch_param('zip');
+		$ll = $this->EE->TMPL->fetch_param('lat_lon');
+		return $this->_get_wx('c',$wxs,$zip,$ll);
 	}
 	
 	function forecast()
 	{
-		$this->_get_wx('f');
+		$wxs = (isset($_COOKIE[$this->short_modname . '_wxs']) && $_COOKIE[$this->short_modname . '_wxs'] != '')? 
+			$_COOKIE[$this->short_modname . '_wxs']: FALSE;
+		$zip = $this->EE->TMPL->fetch_param('zip');
+		$ll = $this->EE->TMPL->fetch_param('lat_lon');
+		return $this->_get_wx('f',$wxs,$zip,$ll);
 	}
 	
-	function _get_wx($type)
+	function _get_wx($type,$wxs=FALSE,$zip=FALSE,$ll=FALSE)
 	{
-		if ( ! isset($_COOKIE[$this->short_modname.'_wxs']) && $_COOKIE[$this->short_modname.'_wxs'] != '')
+		
+		/* In order of priority: */
+		/* 1: WXS */
+		if ($wxs !== FALSE)
 		{
-			$zip = $this->EE->TMPL->fetch_param('zip');
-			$ll = $this->EE->TMPL->fetch_param('lat_lon');
-			if ($zip === FALSE && $ll === FALSE) return FALSE;
-			
-			if ($ll == FALSE && ($ll = $this->_get_cached_ll($zip)) === FALSE)
-			{
-				$g = 'http://maps.google.com/maps/api/geocode/xml?address='.$zip.'&sensor=false';
-				if ( ($x = simplexml_load_file($g)) === FALSE)
-				{
-					$this->log_message('Geocode failed.',2);
-				}
-				$ll = $x->result->geometry->location->lat.','.$x->result->geometry->location->lng;
-				
-				$this->_cache_ll($zip,$x->result->geometry->location->lat,$x->result->geometry->location->lng);
-			}
-			
-			$wxs = $this->_find_nearest_wxs($ll,$zip);
-			setcookie($this->short_modname.'_wxs',$wxs,time()+3600,'/');
-		}
-		else
-		{
-			$wxs = $_COOKIE[$this->short_modname.'_wxs'];
+			return $this->_fetch_wx_data($wxs,$type);
 		}
 		
-		$wxc = $this->_fetch_wx_data($wxs,$type);
+		/* 2: ZIP */
+		if ($zip !== FALSE)
+		{
+			return $this->_fetch_wx_data($this->_find_nearest_wxs('zip',$zip),$type);
+		}
+		
+		/* 3: LL */
+		if ($ll !== FALSE)
+		{
+			return $this->_fetch_wx_data($this->_find_nearest_wxs('ll',$ll),$type);
+		}
+		
+		/* Nothing else? Break. */
+		return FALSE;
 	}
 	
 	function _fetch_wx_data($station,$type)
@@ -63,25 +66,26 @@ class Cr_noaa {
 		switch($type)
 		{
 			case 'f':
-				$url = 'http://weather.gov/xml/current_obs/' . $station . '.xml';
-				break;
-			
-			case 'c':
-			default:
 				$ll = $this->_get_station_ll($station);
-				$url = 'http://www.weather.gov/forecasts/xml/sample_products/browser_interface/ndfdBrowserClientByDay.php?'
-						. 'lat=' . $ll['lat'] . '&lon=' . $ll['lng']
-						. '&format=24+hourly&startDate='.date('Y-m-d',time()).'&numDays=5';
-						/* UNSUMMARIZED DATA
-						'http://www.weather.gov/forecasts/xml/sample_products/browser_interface/ndfdXMLclient.php?'
+				/* SUMMARIZED DATA */
+				$url = 'http://www.weather.gov/forecasts/xml/sample_products/browser_interface/ndfdXMLclient.php?'
 						. 'lat=' . $ll['lat'] . '&lon=' . $ll['lng']
 						. '&product=glance';
+						/* UNSUMMARIZED DATA
+						'http://www.weather.gov/forecasts/xml/sample_products/browser_interface/ndfdBrowserClientByDay.php?'
+						. 'lat=' . $ll['lat'] . '&lon=' . $ll['lng']
+						. '&format=24+hourly&startDate='.date('Y-m-d',time()).'&numDays=5';
 						*/
 						/* EXTENDED DETAILS
 						. '&begin=2004-01-01T00:00:00'
 						. '&end=2013-04-20T00:00:00'
 						. '&product=time-series&maxt=maxt&mint=mint&wx=wx&pop12=pop12&icons=icons';
 						*/
+				break;
+			
+			case 'c':
+			default:
+				$url = 'http://weather.gov/xml/current_obs/' . $station . '.xml';
 				break;
 		}
 		$file = APPPATH . 'cache/' . $this->short_modname . '/' . $station . '-' . $type . '.json';
@@ -159,6 +163,22 @@ class Cr_noaa {
 		return $data;
 	}
 	
+	function _get_zip_ll($z)
+	{
+		if (($ll = $this->_get_cached_ll($zip)) !== FALSE)
+		{
+			return $ll;
+		}
+		$g = 'http://maps.google.com/maps/api/geocode/xml?address='.$zip.'&sensor=false';
+		if ( ($x = simplexml_load_file($g)) === FALSE)
+		{
+			$this->log_message('Geocode failed.',2);
+		}
+		$this->_cache_ll($zip,$x->result->geometry->location->lat,$x->result->geometry->location->lng);
+		return $x->result->geometry->location->lat.','.$x->result->geometry->location->lng;
+	}
+	
+	/*
 	function _cache_ll($z,$lt,$ln)
 	{
 		$q = $this->EE->db->query("INSERT INTO `{$this->EE->db->dbprefix}{$this->short_modname}_zipcache` (`zip`,`ll`) 
@@ -175,7 +195,77 @@ class Cr_noaa {
 		
 		return $q->row('lat').','.$q->row('lng');
 	}
+	*/
 	
+	function _get_cached_zip_ll($z)
+	{
+		$q = $this->EE->db->query("SELECT X(ll) AS lat, Y(ll) AS lng 
+									FROM `{$this->EE->db->dbprefix}{$this->short_modname}_zipcache`
+									WHERE `zip` = {$z};");
+									
+		if ($q->num_rows() == 0) return FALSE;
+		
+		return $q->row('lat').','.$q->row('lng');
+	}
+	
+	function _find_nearest_wxs($t,$td)
+	{
+		switch($t)
+		{
+			case 'zip':
+				// Look for cached zip stations.
+				$cr = $this->EE->db->query("SELECT station 
+											FROM `{$this->EE->db->dbprefix}{$this->short_modname}_zip_stations` 
+											WHERE `zip` = {$td};");
+				if ($cr->num_rows() > 0) return $cr->row('station');
+				
+				// Otherwise, look for cached zip ll...
+				if (($ll = $this->_get_cached_zip_ll($td)) !== FALSE)
+				{
+					die($ll);
+					$wxs = $this->_find_nearest_wxs('ll',$ll);
+					$this->EE->db->query("INSERT INTO `{$this->EE->db->dbprefix}{$this->short_modname}_zip_stations` 
+											(`zip`,`station`) VALUES ({$td},'{$wxs}');"); // cache it for later
+					return $wxs;
+				}
+				else
+				{
+					// ... or geocode the zip.
+					$g = 'http://maps.google.com/maps/api/geocode/xml?address='.$td.'&sensor=false';
+					if ( ($x = simplexml_load_file($g)) === FALSE)
+					{
+						$this->log_message('Geocode failed.',2);
+					}
+					$ll = array((string) $x->result->geometry->location->lat,(string) $x->result->geometry->location->lng);
+					$this->EE->db->query("INSERT INTO `{$this->EE->db->dbprefix}{$this->short_modname}_zipcache` (`zip`,`ll`) 
+											VALUES ({$z},PointFromWKB(POINT({$ll[0]},{$ll[1]})));"); // cache it for later
+					$wxs = $this->_find_nearest_wxs('ll',implode(',',$ll));
+					$this->EE->db->query("INSERT INTO `{$this->EE->db->dbprefix}{$this->short_modname}_zip_stations` 
+											(`zip`,`station`) VALUES ({$td},'{$wxs}');"); // cache it for later
+					return $wxs;
+				}
+				
+				
+				break;
+			
+			case 'll':
+				// No choice but to crawl the entire Station DB. This is why LL is non-preferred.
+				$ls = explode(',',$td);
+				$r = $this->EE->db->query("SELECT name, ( 3959 * acos( cos( radians('{$ls[0]}') ) * cos( radians( lat ) ) * cos( radians( lng ) - radians('{$ls[1]}') ) + sin( radians('{$ls[0]}') ) * sin( radians( lat ) ) ) ) AS distance 
+											FROM {$this->EE->db->dbprefix}{$this->short_modname}_stations 
+											HAVING distance < 150 ORDER BY distance LIMIT 1");
+				if ($r->num_rows() == 0)
+				{
+					$this->log_message('Unable to locate weather station.',2);
+					return FALSE;
+				}
+				
+				return $r->row('name');
+				break;
+		}
+	}
+	
+	/*
 	function _find_nearest_wxs($ll,$z=FALSE)
 	{
 		if ($z)
@@ -195,8 +285,13 @@ class Cr_noaa {
 			return FALSE;
 		}
 		
-		return $r->row('name');
+		$wxs = $r->row('name');
+		
+		$this->EE->db->query("INSERT INTO `{$this->EE->db->dbprefix}{$this->short_modname}_zip_stations` (`zip`,`station`) VALUES ({$z},'{$wxs}');");
+		
+		return $wxs;
 	}
+	*/
 	
 	function _refresh_wxs()
 	{
@@ -230,7 +325,7 @@ class Cr_noaa {
 			$this->log_message('Unable to find station lat/lng.',2);
 			return FALSE;
 		}
-		return array($r->row(),$r->row());
+		return array('lat'=>$r->row('lat'),'lng'=>$r->row('lng'));
 	}
 	
 	
@@ -267,7 +362,7 @@ class Cr_noaa {
 			}
 			
 			$omnilog_entry = new Omnilog_entry(array(
-				'addon_name'    => 'Example Add-on',
+				'addon_name'    => $this->load->Lang->line('cr_noaa_module_name'),
 				'date'          => time(),
 				'message'       => $message,
 				'notify_admin'  => $notify,
