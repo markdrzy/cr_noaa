@@ -178,7 +178,7 @@ class Cr_noaa {
 				// Otherwise, look for cached zip ll...
 				$q = $this->EE->db->query("SELECT X(ll) AS lat, Y(ll) AS lng 
 									FROM `{$this->EE->db->dbprefix}{$this->short_modname}_zipcache`
-									WHERE `zip` = {$z};");
+									WHERE `zip` = {$td};");
 				$ll = ($q->num_rows() > 0)? $q->row('lat') . ',' . $q->row('lng'): FALSE;
 				if ($ll !== FALSE)
 				{
