@@ -19,27 +19,51 @@ class Cr_noaa {
 	
 	function current_conditions()
 	{
+		$wxs = $zip = $ll = '';
+		
 		$wxs = (isset($_COOKIE[$this->short_modname . '_wxs']) && $_COOKIE[$this->short_modname . '_wxs'] != '')? 
 			$_COOKIE[$this->short_modname . '_wxs']: FALSE;
 		if ($wxs === FALSE)
 		{
-			$wxs = $this->EE->TMPL->fetch_param('station');
+			$t = $this->EE->TMPL->fetch_param('type');
+			switch($t)
+			{
+				case 'station':
+					$wxs = $this->EE->TMPL->fetch_param('station');
+					break;
+				case 'zip':
+					$zip = $this->EE->TMPL->fetch_param('zip');
+					break;
+				case 'll':
+					$ll = $this->EE->TMPL->fetch_param('lat_lon');
+					break;
+			}
 		}
-		$zip = $this->EE->TMPL->fetch_param('zip');
-		$ll = $this->EE->TMPL->fetch_param('lat_lon');
 		return $this->_get_wx('c',$wxs,$zip,$ll);
 	}
 	
 	function forecast()
 	{
+		$wxs = $zip = $ll = '';
+		
 		$wxs = (isset($_COOKIE[$this->short_modname . '_wxs']) && $_COOKIE[$this->short_modname . '_wxs'] != '')? 
 			$_COOKIE[$this->short_modname . '_wxs']: FALSE;
 		if ($wxs === FALSE)
 		{
-			$wxs = $this->EE->TMPL->fetch_param('station');
+			$t = $this->EE->TMPL->fetch_param('type');
+			switch($t)
+			{
+				case 'station':
+					$wxs = $this->EE->TMPL->fetch_param('station');
+					break;
+				case 'zip':
+					$zip = $this->EE->TMPL->fetch_param('zip');
+					break;
+				case 'll':
+					$ll = $this->EE->TMPL->fetch_param('lat_lon');
+					break;
+			}
 		}
-		$zip = $this->EE->TMPL->fetch_param('zip');
-		$ll = $this->EE->TMPL->fetch_param('lat_lon');
 		return $this->_get_wx('f',$wxs,$zip,$ll);
 	}
 	
