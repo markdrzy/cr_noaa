@@ -19,7 +19,7 @@ class Cr_noaa {
 	
 	function current_conditions()
 	{
-		$wxs = $zip = $ll = '';
+		$wxs = $zip = $ll = FALSE;
 		
 		$wxs = (isset($_COOKIE[$this->short_modname . '_wxs']) && $_COOKIE[$this->short_modname . '_wxs'] != '')? 
 			$_COOKIE[$this->short_modname . '_wxs']: FALSE;
@@ -29,13 +29,13 @@ class Cr_noaa {
 			switch($t)
 			{
 				case 'station':
-					$wxs = $this->EE->TMPL->fetch_param('station');
+					$wxs = $this->EE->TMPL->fetch_param('location');
 					break;
 				case 'zip':
-					$zip = $this->EE->TMPL->fetch_param('zip');
+					$zip = $this->EE->TMPL->fetch_param('location');
 					break;
 				case 'll':
-					$ll = $this->EE->TMPL->fetch_param('lat_lon');
+					$ll = $this->EE->TMPL->fetch_param('location');
 					break;
 			}
 		}
@@ -44,7 +44,7 @@ class Cr_noaa {
 	
 	function forecast()
 	{
-		$wxs = $zip = $ll = '';
+		$wxs = $zip = $ll = FALSE;
 		
 		$wxs = (isset($_COOKIE[$this->short_modname . '_wxs']) && $_COOKIE[$this->short_modname . '_wxs'] != '')? 
 			$_COOKIE[$this->short_modname . '_wxs']: FALSE;
@@ -54,13 +54,13 @@ class Cr_noaa {
 			switch($t)
 			{
 				case 'station':
-					$wxs = $this->EE->TMPL->fetch_param('station');
+					$wxs = $this->EE->TMPL->fetch_param('location');
 					break;
 				case 'zip':
-					$zip = $this->EE->TMPL->fetch_param('zip');
+					$zip = $this->EE->TMPL->fetch_param('location');
 					break;
 				case 'll':
-					$ll = $this->EE->TMPL->fetch_param('lat_lon');
+					$ll = $this->EE->TMPL->fetch_param('location');
 					break;
 			}
 		}
