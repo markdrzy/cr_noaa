@@ -120,7 +120,7 @@ class Cr_noaa {
 							. '&product=glance';
 					$url = 'http://www.weather.gov/forecasts/xml/sample_products/browser_interface/ndfdBrowserClientByDay.php?'
 							. 'lat=' . $ll['lat'] . '&lon=' . $ll['lng']
-							. '&format=24+hourly&startDate='.date('Y-m-d').'&numDays=5&maxt=maxt&mint=mint&pop12=pop12';
+							. '&format=24+hourly&startDate='.date('Y-m-d').'&numDays=6&maxt=maxt&mint=mint&pop12=pop12';
 					break;
 				
 				case 'c':
