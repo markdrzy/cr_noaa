@@ -47,15 +47,14 @@ class Cr_noaa_upd {
 			$this->EE->dbforge->add_field($modmeta_fields);
 			$this->EE->dbforge->add_key('id',TRUE);
 			$this->EE->dbforge->create_table('cr_module_meta',TRUE);
-			
-			$mm_data = array(
-				'id'			=> '',
-				'mod_id'		=> $mod_id,
-				'mod_name'		=> $this->modname,
-				'mod_settings'	=> ''
-			);
-			$this->EE->db->insert('cr_module_meta',$mm_data);
 		}
+		$mm_data = array(
+			'id'			=> '',
+			'mod_id'		=> $mod_id,
+			'mod_name'		=> $this->modname,
+			'mod_settings'	=> ''
+		);
+		$this->EE->db->insert('cr_module_meta',$mm_data);
 		
 		// Create Zipcache Table
 		$zipcache_fields = array(
