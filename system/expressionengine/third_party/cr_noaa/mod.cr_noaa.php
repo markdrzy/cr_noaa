@@ -317,7 +317,7 @@ class Cr_noaa {
 			}
 			
 			$omnilog_entry = new Omnilog_entry(array(
-				'addon_name'    => $this->load->Lang->line('cr_noaa_module_name'),
+				'addon_name'    => $this->EE->lang->line('cr_noaa_module_name'),
 				'date'          => time(),
 				'message'       => $message,
 				'notify_admin'  => $notify,
